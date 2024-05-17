@@ -21,9 +21,12 @@ volatile unsigned long t1 = 0;
 volatile unsigned long t2 = 0;
 volatile unsigned long t3 = 0;
 
-double rpm = 0;
-double pos = 0;
+float rpm = 0;
+float pos = 0;
 int resolution = 4320;
+float w = 0;
+
+const float k_value = (2 * 3.1416 * 1000) / resolution;
 
 /////////////////////////// RECEPCIÓN WIFI //////////////////
 String inputString = "";
@@ -155,9 +158,10 @@ void loop()
     }
     if(millis() - last_time > sample_time){        
         rpm = (pulsos * 60 * 1000.0) / (resolution * (millis() - last_time));
+        w = (k_value*pulsos)/(millis() - last_time);
         pos = (pulsos * 360) / resolution;
         pulsos = 0;
         last_time = millis();
-        Serial.println("RPM: " + String(rpm));
+        Serial.println("w: " + String(w) + "rad/s");
     }
 }
