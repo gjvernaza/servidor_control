@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include "motorControl.h"
 
 const char *ssid = "ServerESP32";
 const char *password = "1234567890";
@@ -15,7 +16,7 @@ volatile byte anterior = 0;
 volatile byte actual = 0;
 
 unsigned long last_time = 0;
-unsigned long sample_time = 50;
+unsigned long sample_time = 100;
 
 volatile unsigned long t1 = 0;
 volatile unsigned long t2 = 0;
@@ -46,6 +47,10 @@ const int pwmChannel = 0;      // Canal PWM
 const int pwmResolution = 12;   // Resolución en bits
 const int pwmFrequency = 1000;  // Frecuencia en Hz
 
+///////////// motorControl.h ////////////////
+
+motorControl motor1(sample_time);
+
 void setup()
 {
     Serial.begin(115200);
@@ -57,6 +62,8 @@ void setup()
     attachInterrupt(digitalPinToInterrupt(phase_B), encoder, CHANGE);    
     digitalWrite(IN1_M1, LOW);
     digitalWrite(IN2_M1, LOW);
+    motor1.setCvLimits(4095,0);
+    motor1.setPvLimits(9,0);
     ledcSetup(pwmChannel, pwmFrequency, pwmResolution);
     ledcAttachPin(pwmPin, pwmChannel);
     WiFi.softAP(ssid, password);
@@ -138,9 +145,9 @@ void loop()
                 t1 = millis();
                 String request = client.readStringUntil('\n');
                 t2 = millis();
-                Serial.println("TIEMPO DE RECEPCION: " + String(t2 - t1) + " ms");
-                Serial.println(request);
-                out_value = get_data(request);
+                //Serial.println(request);
+                //Serial.println("TIEMPO DE RECEPCION: " + String(t2 - t1) + " ms");
+                out_value = motor1.scaleCv(get_data(request));
                 if(out_value > 0){
                     clock_wise(out_value);
                 } 
@@ -153,7 +160,7 @@ void loop()
                 
             }
         }
-        client.stop();
+        
         
     }
     if(millis() - last_time > sample_time){        
@@ -161,7 +168,10 @@ void loop()
         w = (k_value*pulsos)/(millis() - last_time);
         pos = (pulsos * 360) / resolution;
         pulsos = 0;
+        w = motor1.scalePv(w);
+        client.println(String(w));
         last_time = millis();
-        Serial.println("w: " + String(w) + "rad/s");
+        //Serial.println("w: " + String(w) + "rad/s");
     }
+    client.stop();
 }
